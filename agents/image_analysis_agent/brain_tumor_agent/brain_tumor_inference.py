@@ -39,11 +39,11 @@ class BrainTumorAgent:
         Executes segmentation and radiological feature extraction on MRI scan.
         Generates visualized segmentation overlay.
         """
-        if not os.path.exists(image_path):
+        if not image_path or not os.path.exists(image_path):
             return {
                 "detected": False,
                 "confidence": 0.0,
-                "summary": "Error: MRI image file not found.",
+                "summary": "Error: No MRI image file provided or file not found.",
                 "mask_path": None
             }
 

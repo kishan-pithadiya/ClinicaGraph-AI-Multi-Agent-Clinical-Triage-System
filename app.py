@@ -148,8 +148,13 @@ def chat(
 
     try:
         response_data = process_query(request.query, session_id=current_session)
-        last_msg = response_data['messages'][-1]
-        response_text = last_msg.content if hasattr(last_msg, 'content') else str(last_msg)
+        response_text = ""
+        if response_data.get("output"):
+            out = response_data["output"]
+            response_text = out.content if hasattr(out, 'content') else str(out)
+        elif response_data.get('messages'):
+            last_msg = response_data['messages'][-1]
+            response_text = last_msg.content if hasattr(last_msg, 'content') else str(last_msg)
 
         result = {
             "status": "success",
@@ -282,6 +287,7 @@ def validate_output(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/soap-note")
 @app.post("/api/soap-note")
 def generate_soap_note(
     request: Request,
