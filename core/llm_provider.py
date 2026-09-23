@@ -69,12 +69,36 @@ class MockChatModel(Runnable):
 
         # 4. Clinical SOAP Note Generator
         if "soap" in prompt_str or "subjective" in prompt_str:
-            return AIMessage(content='''{
-                "subjective": "Patient initiated clinical consultation regarding chest radiography, respiratory symptoms, or medical imaging triage.",
-                "objective": "Consultation query analyzed by ClinicaGraph multi-agent diagnostic pipeline. Imaging or literature triage executed.",
-                "assessment": "Clinical inquiry addressed with evidence-based guidance and automated radiographic workflow recommendations.",
-                "plan": "1. Correlate with formal radiologist review. 2. Monitor pulmonary and systemic symptoms. 3. Seek prompt medical attention if acute respiratory distress occurs."
-            }''')
+            transcript = prompt_str.split("consultation transcript:")[-1].lower() if "consultation transcript:" in prompt_str else prompt_str
+            
+            if any(term in transcript for term in ["chest pain", "arm", "cardiac", "dyspnea", "chest_xray", "covid-19"]):
+                return AIMessage(content='''{
+                    "subjective": "58-year-old male presents with acute onset of severe substernal chest pain radiating to left arm and dyspnea lasting ~45 minutes.",
+                    "objective": "Vital signs reviewed. Digital Chest Radiography (PA view) processed via ClinicaGraph DenseNet-121: Negative for acute pulmonary consolidation or viral opacities. Clear lung fields.",
+                    "assessment": "Acute chest pain with high clinical suspicion for Acute Coronary Syndrome (ACS). Pulmonary etiology (pneumonia/COVID-19) ruled out by radiographic imaging.",
+                    "plan": "1. Urgent 12-lead EKG and serial cardiac troponin panels. 2. Administer Aspirin 325 mg & sublingual Nitroglycerin. 3. Immediate Cardiology consultation."
+                }''')
+            elif any(term in transcript for term in ["brain", "mri", "glioma", "tumor", "headache"]):
+                return AIMessage(content='''{
+                    "subjective": "Patient presents with persistent progressive headaches, focal neurological signs, or intracranial lesion concern.",
+                    "objective": "Cranial axial slice MRI evaluated via ClinicaGraph computer vision segmentation pipeline. Hyper-intense contrast region mapped with bounding contours.",
+                    "assessment": "Intracranial mass lesion identified on axial MRI. Differential considerations include high-grade glioma vs meningioma vs secondary intracranial process.",
+                    "plan": "1. Formal neuro-radiologist volumetric review. 2. High-resolution contrast-enhanced 3T MRI sequencing. 3. Neuro-surgical evaluation for stereotactic biopsy."
+                }''')
+            elif any(term in transcript for term in ["skin", "lesion", "melanoma", "mole", "rash"]):
+                return AIMessage(content='''{
+                    "subjective": "Patient requests evaluation of a pigmented cutaneous skin lesion presenting with irregular borders and recent visual change.",
+                    "objective": "Dermoscopic image analyzed via ClinicaGraph morphological segmentation. ABCD clinical criteria mapped: Border irregularity and pigment variegation noted.",
+                    "assessment": "Atypical pigmented melanocytic lesion. Malignancy (cutaneous melanoma) cannot be ruled out without histological examination.",
+                    "plan": "1. In-person dermatological examination with epiluminescence microscopy. 2. Full-thickness excisional biopsy with 2mm margins. 3. Dermatopathology histopathology report."
+                }''')
+            else:
+                return AIMessage(content='''{
+                    "subjective": "Patient initiated clinical consultation regarding symptom evaluation and medical triage.",
+                    "objective": "Consultation query analyzed by ClinicaGraph multi-agent diagnostic pipeline. Imaging or literature triage executed.",
+                    "assessment": "Clinical inquiry addressed with evidence-based guidance and automated diagnostic workflow recommendations.",
+                    "plan": "1. Correlate with attending physician evaluation. 2. Monitor vital signs and report progression. 3. Proceed with targeted diagnostic labs if symptomatic."
+                }''')
 
         # Extract user query if wrapped in prompt templates
         if "user:" in prompt_str:
