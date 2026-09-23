@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClinicaGraph AI - Clinical Triage System</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-4H7V10h4V6h2v4h4v2h-4v4z'/></svg>">
+    <title>ClinicaGraph AI - Multi-Agent Clinical Triage System</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-4H7V10h4V6h2v4h4v2h-4v4z'/></svg>">
     
     <!-- Bootstrap 5 & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,46 +14,77 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        :root {
-            --primary-med: #0284c7;
-            --primary-dark: #0369a1;
+        /* === THEME VARIABLES === */
+        :root[data-theme="dark"] {
+            --bg-canvas: #090e17;
+            --card-surface: #10192a;
+            --card-surface-hover: #162238;
+            --border-soft: #1e293b;
+            --border-highlight: #334155;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --primary-accent: #38bdf8;
+            --primary-accent-hover: #0ea5e9;
+            --assistant-bg: #111c30;
+            --user-bg: linear-gradient(135deg, #0284c7, #2563eb);
+            --input-bg: #0d1524;
+            --input-border: #1e293b;
+            --chip-bg: #162033;
+            --chip-hover: #1e2d48;
+            --chip-border: #24344d;
+        }
+
+        :root[data-theme="light"] {
             --bg-canvas: #f8fafc;
             --card-surface: #ffffff;
+            --card-surface-hover: #f1f5f9;
             --border-soft: #e2e8f0;
+            --border-highlight: #cbd5e1;
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --primary-accent: #0284c7;
+            --primary-accent-hover: #0369a1;
+            --assistant-bg: #ffffff;
+            --user-bg: linear-gradient(135deg, #0284c7, #0369a1);
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --chip-bg: #f1f5f9;
+            --chip-hover: #e2e8f0;
+            --chip-border: #cbd5e1;
         }
 
         body {
             background-color: var(--bg-canvas);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            transition: background-color 0.25s ease, color 0.25s ease;
+            overflow-x: hidden;
         }
 
         .main-shell {
-            max-width: 1400px;
+            max-width: 1440px;
             margin: 0 auto;
-            height: 94vh;
+            height: 96vh;
             display: flex;
             flex-direction: column;
         }
 
+        /* Top Header */
         .navbar-brand-custom {
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 700;
-            color: var(--primary-med);
             letter-spacing: -0.02em;
         }
 
         .pulse-status {
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
             background-color: #10b981;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
             animation: pulse-ring 2s infinite;
         }
 
@@ -63,25 +94,43 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
+        /* Sidebar */
         .sidebar-card {
             background: var(--card-surface);
             border: 1px solid var(--border-soft);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 18px;
             height: 100%;
             overflow-y: auto;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
+        .capability-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            padding: 10px 12px;
+            transition: all 0.2s ease;
+        }
+        .capability-pill:hover {
+            border-color: var(--primary-accent);
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        /* Chat Panel */
         .chat-panel {
             background: var(--card-surface);
             border: 1px solid var(--border-soft);
-            border-radius: 12px;
+            border-radius: 14px;
             height: 100%;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
             overflow: hidden;
+            position: relative;
         }
 
         .chat-body-area {
@@ -90,101 +139,145 @@
             padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
+            scroll-behavior: smooth;
         }
 
+        /* Message Bubbles */
         .message-bubble {
-            max-width: 82%;
-            padding: 14px 18px;
-            border-radius: 14px;
-            line-height: 1.55;
-            font-size: 0.95rem;
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 0.94rem;
             position: relative;
         }
 
         .user-bubble {
             align-self: flex-end;
-            background-color: #0284c7;
+            background: var(--user-bg);
             color: #ffffff;
-            border-bottom-right-radius: 2px;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
         }
 
         .assistant-bubble {
             align-self: flex-start;
-            background-color: #ffffff;
+            background-color: var(--assistant-bg);
             border: 1px solid var(--border-soft);
-            border-bottom-left-radius: 2px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
 
         .badge-agent {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 3px 9px;
-            border-radius: 6px;
-            background-color: #e0f2fe;
-            color: #0369a1;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 8px;
-        }
-
-        .badge-urgency {
             font-size: 0.72rem;
             font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
+            color: var(--primary-accent);
+            background: rgba(56, 189, 248, 0.12);
+            padding: 4px 9px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .urgency-critical { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
-        .urgency-urgent { background: #ffedd5; color: #ea580c; border: 1px solid #fdba74; }
-        .urgency-routine { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .urgency-informational { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        /* Urgency Badges */
+        .badge-urgency {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .urgency-critical { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .urgency-urgent   { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .urgency-routine  { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .urgency-informational { background-color: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
 
-        .chat-footer-bar {
-            padding: 14px 20px;
+        /* Quick Action Chips */
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 20px 4px 20px;
+            background: var(--card-surface);
             border-top: 1px solid var(--border-soft);
-            background: #ffffff;
+        }
+
+        .prompt-chip {
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .prompt-chip:hover {
+            background: var(--chip-hover);
+            color: var(--text-main);
+            border-color: var(--primary-accent);
+            transform: translateY(-1px);
+        }
+
+        /* Composer Footer */
+        .chat-footer-bar {
+            padding: 12px 20px 16px 20px;
+            background: var(--card-surface);
         }
 
         .input-composer {
-            border: 1px solid var(--border-soft);
-            border-radius: 24px;
-            padding: 10px 18px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 10px 14px;
             resize: none;
-            outline: none;
             max-height: 120px;
+            font-size: 0.92rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-
         .input-composer:focus {
-            border-color: var(--primary-med);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
         }
 
         .btn-action-round {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: none;
-            transition: all 0.15s ease-in-out;
+            flex-shrink: 0;
+            transition: transform 0.15s ease, background-color 0.2s;
+        }
+        .btn-action-round:hover {
+            transform: scale(1.05);
         }
 
+        /* Preview Tray */
         .preview-tray {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            background: #f1f5f9;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            gap: 12px;
         }
-
         .preview-thumb {
             width: 48px;
             height: 48px;
@@ -193,38 +286,86 @@
             border: 1px solid var(--border-soft);
         }
 
+        /* Markdown Output Formatting */
+        .markdown-output {
+            color: var(--text-main);
+        }
+        .markdown-output h1, .markdown-output h2, .markdown-output h3, .markdown-output h4 {
+            color: var(--primary-accent);
+            font-weight: 700;
+            margin-top: 10px;
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+        }
+        .markdown-output p {
+            margin-bottom: 8px;
+        }
+        .markdown-output ul, .markdown-output ol {
+            padding-left: 20px;
+            margin-bottom: 8px;
+        }
+        .markdown-output li {
+            margin-bottom: 4px;
+        }
+        .markdown-output code {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--primary-accent);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .markdown-output pre {
+            background-color: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+        }
+
+        /* Result Image Artifact */
         .result-artifact-img {
             max-width: 100%;
             max-height: 380px;
             border-radius: 8px;
             border: 1px solid var(--border-soft);
-            margin-top: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .result-artifact-img:hover {
+            transform: scale(1.01);
+            border-color: var(--primary-accent);
         }
 
-        .soap-section {
-            background: #f8fafc;
-            border-left: 4px solid var(--primary-med);
-            padding: 12px 16px;
-            margin-bottom: 14px;
-            border-radius: 0 8px 8px 0;
-        }
-
+        /* Typing Dots */
         .typing-dot {
+            display: inline-block;
             width: 6px;
             height: 6px;
-            background: var(--primary-med);
             border-radius: 50%;
-            display: inline-block;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
+            background-color: var(--text-muted);
+            margin-right: 3px;
+            animation: wave 1.2s infinite ease-in-out;
         }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes wave {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
 
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+        /* SOAP Modal */
+        .modal-content {
+            background-color: var(--card-surface);
+            border: 1px solid var(--border-soft);
+            color: var(--text-main);
+            border-radius: 14px;
+        }
+        .soap-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
         }
     </style>
 </head>
@@ -234,23 +375,33 @@
     <!-- Top Navigation Header -->
     <header class="d-flex justify-content-between align-items-center mb-3 px-2">
         <div class="navbar-brand-custom">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#0284c7">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#38bdf8">
                 <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-4H7V10h4V6h2v4h4v2h-4v4z"/>
             </svg>
             <div>
-                <h5 class="mb-0 fw-bold">ClinicaGraph AI</h5>
-                <small class="text-muted" style="font-size: 0.75rem;">Autonomous Multi-Agent Clinical Triage System</small>
+                <h5 class="mb-0 fw-bold" style="color: var(--text-main);">ClinicaGraph AI</h5>
+                <small class="text-muted" style="font-size: 0.75rem;">Multi-Agent Clinical Decision & Triage System</small>
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-white text-secondary border px-3 py-2 d-none d-md-flex align-items-center gap-2" style="font-size: 0.8rem;">
+            <!-- Theme Toggle Button -->
+            <button class="btn btn-outline-secondary btn-sm px-2" id="btn-theme-toggle" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon me-1"></i> <span id="theme-label" class="d-none d-sm-inline">Dark</span>
+            </button>
+
+            <!-- System Ready Badge -->
+            <span class="badge border px-3 py-2 d-none d-md-flex align-items-center gap-2" style="background: rgba(255,255,255,0.04); border-color: var(--border-soft); font-size: 0.8rem; color: var(--text-muted);">
                 <span class="pulse-status"></span> System Ready
             </span>
-            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" id="btn-soap-modal" data-bs-toggle="modal" data-bs-target="#soapModal">
+
+            <!-- SOAP Note Modal Button -->
+            <button class="btn btn-primary btn-sm px-3 fw-semibold" id="btn-soap-modal" data-bs-toggle="modal" data-bs-target="#soapModal">
                 <i class="fas fa-file-medical me-1"></i> Clinical SOAP Note
             </button>
-            <button class="btn btn-outline-secondary btn-sm" id="btn-clear-chat" title="Clear Consultation Transcript">
+
+            <!-- Reset Chat Button -->
+            <button class="btn btn-outline-secondary btn-sm" id="btn-clear-chat" title="Reset Session Transcript">
                 <i class="fas fa-rotate-right"></i>
             </button>
         </div>
@@ -261,62 +412,78 @@
         <!-- Clinical Left Sidebar -->
         <aside class="col-lg-3 col-md-4 d-none d-md-block h-100">
             <div class="sidebar-card">
-                <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Multi-Agent Orchestration</h6>
-                
-                <div class="mb-3">
-                    <div class="p-2 border rounded bg-light mb-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="fas fa-compass text-primary"></i>
-                            <strong style="font-size: 0.85rem;">Supervisor & Triage</strong>
-                        </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">LangGraph router with urgency stratification (Critical / Urgent / Routine).</small>
-                    </div>
-
-                    <div class="p-2 border rounded bg-light mb-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="fas fa-book-medical text-info"></i>
-                            <strong style="font-size: 0.85rem;">Evidence RAG Engine</strong>
-                        </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">Qdrant vector retrieval + Cross-Encoder TinyBERT reranker.</small>
-                    </div>
-
-                    <div class="p-2 border rounded bg-light mb-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="fas fa-globe-americas text-warning"></i>
-                            <strong style="font-size: 0.85rem;">PubMed & Web Search</strong>
-                        </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">Real-time clinical literature & epidemic surveillance.</small>
-                    </div>
-
-                    <div class="p-2 border rounded bg-light mb-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="fas fa-x-ray text-success"></i>
-                            <strong style="font-size: 0.85rem;">Multimodal Vision Pipeline</strong>
-                        </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">Brain MRI segmentation, Chest X-Ray detection, Dermoscopy ABCD.</small>
-                    </div>
-
-                    <div class="p-2 border rounded bg-light mb-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="fas fa-user-doctor text-danger"></i>
-                            <strong style="font-size: 0.85rem;">Human-in-the-Loop</strong>
-                        </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">Mandatory clinical verification on automated diagnostic alerts.</small>
+                <!-- Section 1: Quick Scan Samples -->
+                <div>
+                    <h6 class="fw-bold text-uppercase text-muted mb-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                        <i class="fas fa-microscope text-info me-1"></i> 1-Click Sample Scans
+                    </h6>
+                    <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">Load benchmark hospital images instantly for testing:</small>
+                    <div class="d-flex flex-column gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info text-start d-flex align-items-center justify-content-between" id="btn-sample-cxr">
+                            <span><i class="fas fa-x-ray me-2"></i>Chest X-Ray (COVID/Norm)</span>
+                            <i class="fas fa-arrow-right small"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning text-start d-flex align-items-center justify-content-between" id="btn-sample-skin">
+                            <span><i class="fas fa-allergies me-2"></i>Dermoscopy Skin Lesion</span>
+                            <i class="fas fa-arrow-right small"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-top">
-                    <h6 class="fw-bold text-muted mb-2" style="font-size: 0.75rem;">Clinical Triage Legend</h6>
+                <!-- Section 2: Active Multi-Agent Engine -->
+                <div>
+                    <h6 class="fw-bold text-uppercase text-muted mb-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                        <i class="fas fa-network-wired text-primary me-1"></i> Multi-Agent Engine
+                    </h6>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="capability-pill">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <strong style="font-size: 0.82rem;"><i class="fas fa-compass text-primary me-2"></i>Supervisor Triage</strong>
+                                <span class="badge bg-success-subtle text-success small">Active</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Stratifies clinical urgency (Critical/Urgent/Routine).</small>
+                        </div>
+
+                        <div class="capability-pill">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <strong style="font-size: 0.82rem;"><i class="fas fa-book-medical text-info me-2"></i>Evidence RAG</strong>
+                                <span class="badge bg-info-subtle text-info small">Qdrant DB</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Dense & Sparse vector retrieval with TinyBERT reranker.</small>
+                        </div>
+
+                        <div class="capability-pill">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <strong style="font-size: 0.82rem;"><i class="fas fa-eye text-warning me-2"></i>Multimodal Vision</strong>
+                                <span class="badge bg-warning-subtle text-warning small">3 Models</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Brain MRI, DenseNet CXR, U-Net Dermoscopy.</small>
+                        </div>
+
+                        <div class="capability-pill">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <strong style="font-size: 0.82rem;"><i class="fas fa-user-doctor text-danger me-2"></i>Human-in-the-Loop</strong>
+                                <span class="badge bg-danger-subtle text-danger small">Safety</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Requires clinician sign-off on automated findings.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Urgency Stratification Legend -->
+                <div>
+                    <h6 class="fw-bold text-uppercase text-muted mb-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">Triage Severity Levels</h6>
                     <div class="d-flex flex-wrap gap-1">
-                        <span class="badge urgency-critical">Critical</span>
+                        <span class="badge urgency-critical">Critical (911)</span>
                         <span class="badge urgency-urgent">Urgent</span>
                         <span class="badge urgency-routine">Routine</span>
                         <span class="badge urgency-informational">Info</span>
                     </div>
                 </div>
 
-                <div class="mt-4 p-2 bg-light border rounded text-muted" style="font-size: 0.7rem;">
-                    <i class="fas fa-shield-halved text-primary me-1"></i> HIPAA compliance mode active. Patient identifiers (PII/PHI) automatically masked.
+                <!-- Footer notice -->
+                <div class="mt-auto p-2 rounded text-muted" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft); font-size: 0.7rem;">
+                    <i class="fas fa-shield-halved text-info me-1"></i> <strong>HIPAA Guardrail:</strong> PII/PHI de-identification & prompt-injection defense active.
                 </div>
             </div>
         </aside>
@@ -332,16 +499,40 @@
                             <span class="badge-agent"><i class="fas fa-shield-heart"></i> ClinicaGraph Supervisor</span>
                             <span class="badge badge-urgency urgency-informational">System Ready</span>
                         </div>
-                        <p class="mb-2 fw-medium">Welcome to ClinicaGraph AI Clinical Decision System.</p>
+                        <h6 class="mb-2 fw-bold" style="color: var(--primary-accent);">Welcome to ClinicaGraph AI Clinical Decision System</h6>
                         <p class="mb-2 text-muted" style="font-size: 0.9rem;">
-                            I provide multi-agent clinical decision support, medical literature retrieval, and multimodal radiographic analysis.
+                            ClinicaGraph is an autonomous multi-agent clinical decision support workstation designed for rapid symptom triage, medical imaging diagnostics, and literature retrieval.
                         </p>
-                        <ul class="mb-0 text-muted ps-3" style="font-size: 0.85rem;">
-                            <li>Upload a <strong>Brain MRI</strong>, <strong>Chest X-Ray</strong>, or <strong>Skin Lesion</strong> for diagnostic segmentation.</li>
-                            <li>Inquire regarding oncology research, pulmonary pathologies, or COVID-19 management.</li>
-                            <li>Generate structured <strong>Clinical SOAP Notes</strong> at any point during consultation.</li>
-                        </ul>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background: rgba(255,255,255,0.02); border-color: var(--border-soft);">
+                                    <strong class="d-block small text-info"><i class="fas fa-comment-medical me-1"></i> 1. Consult & Ask</strong>
+                                    <small class="text-muted" style="font-size: 0.78rem;">Ask clinical questions or click any quick-prompt chip below.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background: rgba(255,255,255,0.02); border-color: var(--border-soft);">
+                                    <strong class="d-block small text-warning"><i class="fas fa-upload me-1"></i> 2. Upload Imaging</strong>
+                                    <small class="text-muted" style="font-size: 0.78rem;">Attach an X-Ray, MRI, or Dermoscopy scan via paperclip or sample buttons.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded border" style="background: rgba(255,255,255,0.02); border-color: var(--border-soft);">
+                                    <strong class="d-block small text-success"><i class="fas fa-file-medical me-1"></i> 3. Export SOAP Note</strong>
+                                    <small class="text-muted" style="font-size: 0.78rem;">Generate EHR-ready clinical documentation with one click.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Quick Action Chips Tray -->
+                <div class="chips-container" id="quick-chips">
+                    <span class="prompt-chip" data-prompt="Can you give me 5 ways of Chest X-Ray Detection"><i class="fas fa-x-ray text-info"></i> 5 CXR Detection Ways</span>
+                    <span class="prompt-chip" data-prompt="What are the diagnostic symptoms and criteria for COVID-19 pneumonia?"><i class="fas fa-lungs-virus text-warning"></i> COVID-19 Pneumonia</span>
+                    <span class="prompt-chip" data-prompt="Explain the ABCD rule used in dermoscopic skin lesion evaluation"><i class="fas fa-allergies text-success"></i> ABCD Skin Lesion Rule</span>
+                    <span class="prompt-chip" data-prompt="How does ClinicaGraph perform brain MRI tumor contour segmentation?"><i class="fas fa-brain text-primary"></i> Brain MRI Segmentation</span>
+                    <span class="prompt-chip" data-prompt="Patient presents with severe acute chest pain and shortness of breath"><i class="fas fa-triangle-exclamation text-danger"></i> Emergency Red-Flag Test</span>
                 </div>
 
                 <!-- Chat Composer Footer -->
@@ -351,9 +542,9 @@
                         <img id="preview-img" class="preview-thumb" src="" alt="Preview">
                         <div class="flex-grow-1">
                             <span class="small fw-semibold text-truncate d-block" id="preview-name">image.png</span>
-                            <small class="text-muted" style="font-size: 0.72rem;">Image attached for diagnostic inference</small>
+                            <small class="text-muted" style="font-size: 0.72rem;">Attached for computer vision diagnostic analysis</small>
                         </div>
-                        <button class="btn btn-sm btn-link text-danger p-0" id="btn-remove-attachment" title="Remove">
+                        <button class="btn btn-sm btn-link text-danger p-0" id="btn-remove-attachment" title="Remove attachment">
                             <i class="fas fa-times-circle fs-5"></i>
                         </button>
                     </div>
@@ -362,7 +553,7 @@
                         <!-- File Upload Button -->
                         <div class="position-relative">
                             <input type="file" id="image-upload" accept="image/*" class="d-none">
-                            <button type="button" class="btn btn-outline-secondary btn-action-round" id="btn-trigger-upload" title="Attach Medical Image">
+                            <button type="button" class="btn btn-outline-secondary btn-action-round" id="btn-trigger-upload" title="Attach Medical Image (CXR, MRI, Skin)">
                                 <i class="fas fa-paperclip"></i>
                             </button>
                         </div>
@@ -376,7 +567,7 @@
                         <textarea class="form-control input-composer flex-grow-1" id="message-input" rows="1" placeholder="Describe symptoms, ask a clinical question, or upload medical imaging..."></textarea>
 
                         <!-- Send Button -->
-                        <button type="submit" class="btn btn-primary btn-action-round" id="btn-send-message" title="Submit">
+                        <button type="submit" class="btn btn-primary btn-action-round" id="btn-send-message" title="Submit Query">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </form>
@@ -393,7 +584,7 @@
             <div class="modal-header border-bottom-0 pb-0">
                 <div>
                     <h5 class="modal-title fw-bold" id="soapModalLabel"><i class="fas fa-file-medical text-primary me-2"></i>Structured Clinical SOAP Note</h5>
-                    <small class="text-muted">Generated by ClinicaGraph Clinical Documentation Engine</small>
+                    <small class="text-muted">Synthesized from session dialogue by ClinicaGraph Documentation Engine</small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -403,21 +594,21 @@
                     <p class="small mb-0">Synthesizing consultation transcript into structured SOAP format...</p>
                 </div>
                 <div id="soap-content" style="display: none;">
-                    <div class="soap-section">
-                        <h6 class="fw-bold text-primary mb-1">S — Subjective</h6>
-                        <p class="mb-0 text-secondary" id="soap-s" style="font-size: 0.9rem;">-</p>
+                    <div class="soap-card">
+                        <h6 class="fw-bold text-primary mb-1"><i class="fas fa-user text-primary me-2"></i>S — Subjective</h6>
+                        <p class="mb-0 text-muted" id="soap-s" style="font-size: 0.9rem;">-</p>
                     </div>
-                    <div class="soap-section">
-                        <h6 class="fw-bold text-primary mb-1">O — Objective</h6>
-                        <p class="mb-0 text-secondary" id="soap-o" style="font-size: 0.9rem;">-</p>
+                    <div class="soap-card">
+                        <h6 class="fw-bold text-info mb-1"><i class="fas fa-stethoscope text-info me-2"></i>O — Objective</h6>
+                        <p class="mb-0 text-muted" id="soap-o" style="font-size: 0.9rem;">-</p>
                     </div>
-                    <div class="soap-section">
-                        <h6 class="fw-bold text-primary mb-1">A — Assessment</h6>
-                        <p class="mb-0 text-secondary" id="soap-a" style="font-size: 0.9rem;">-</p>
+                    <div class="soap-card">
+                        <h6 class="fw-bold text-warning mb-1"><i class="fas fa-clipboard-check text-warning me-2"></i>A — Assessment</h6>
+                        <p class="mb-0 text-muted" id="soap-a" style="font-size: 0.9rem;">-</p>
                     </div>
-                    <div class="soap-section">
-                        <h6 class="fw-bold text-primary mb-1">P — Plan</h6>
-                        <p class="mb-0 text-secondary" id="soap-p" style="font-size: 0.9rem;">-</p>
+                    <div class="soap-card">
+                        <h6 class="fw-bold text-success mb-1"><i class="fas fa-hospital-user text-success me-2"></i>P — Plan</h6>
+                        <p class="mb-0 text-muted" id="soap-p" style="font-size: 0.9rem;">-</p>
                     </div>
                 </div>
             </div>
@@ -445,11 +636,84 @@
         const btnVoiceRecord = document.getElementById('btn-voice-record');
         const btnClearChat = document.getElementById('btn-clear-chat');
         const btnSoapModal = document.getElementById('btn-soap-modal');
+        const btnThemeToggle = document.getElementById('btn-theme-toggle');
+        const themeLabel = document.getElementById('theme-label');
+        const quickChips = document.querySelectorAll('.prompt-chip');
+        const btnSampleCxr = document.getElementById('btn-sample-cxr');
+        const btnSampleSkin = document.getElementById('btn-sample-skin');
 
         let selectedFile = null;
         let isRecording = false;
         let mediaRecorder = null;
         let audioChunks = [];
+
+        // Theme Management (Dark default)
+        const savedTheme = localStorage.getItem('clinicagraph_theme') || 'dark';
+        applyTheme(savedTheme);
+
+        btnThemeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(nextTheme);
+            localStorage.setItem('clinicagraph_theme', nextTheme);
+        });
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                btnThemeToggle.innerHTML = '<i class="fas fa-sun me-1"></i> <span id="theme-label" class="d-none d-sm-inline">Light</span>';
+            } else {
+                btnThemeToggle.innerHTML = '<i class="fas fa-moon me-1"></i> <span id="theme-label" class="d-none d-sm-inline">Dark</span>';
+            }
+        }
+
+        // Quick prompt chips click listener
+        quickChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const prompt = chip.getAttribute('data-prompt');
+                messageInput.value = prompt;
+                messageInput.focus();
+                // Auto trigger send
+                chatForm.dispatchEvent(new Event('submit'));
+            });
+        });
+
+        // 1-Click Sample Scans Loader
+        if (btnSampleCxr) {
+            btnSampleCxr.addEventListener('click', async () => {
+                try {
+                    const sampleUrl = '/sample_images/chest_x-ray_covid_and_normal/covid-example-01.jpg';
+                    const response = await fetch(sampleUrl);
+                    const blob = await response.blob();
+                    selectedFile = new File([blob], "sample_covid_cxr.jpg", { type: "image/jpeg" });
+                    previewImg.src = sampleUrl;
+                    previewName.textContent = "sample_covid_cxr.jpg";
+                    previewTray.style.display = 'flex';
+                    messageInput.value = "Evaluate attached Chest X-Ray radiograph for pulmonary consolidation or COVID-19 opacities.";
+                    messageInput.focus();
+                } catch (e) {
+                    alert("Could not load sample Chest X-Ray. Please attach manually via paperclip.");
+                }
+            });
+        }
+
+        if (btnSampleSkin) {
+            btnSampleSkin.addEventListener('click', async () => {
+                try {
+                    const sampleUrl = '/sample_images/skin_lesion_images/ISIC_0012558.jpg';
+                    const response = await fetch(sampleUrl);
+                    const blob = await response.blob();
+                    selectedFile = new File([blob], "sample_skin_lesion.jpg", { type: "image/jpeg" });
+                    previewImg.src = sampleUrl;
+                    previewName.textContent = "sample_skin_lesion.jpg";
+                    previewTray.style.display = 'flex';
+                    messageInput.value = "Perform dermoscopic segmentation and evaluate lesion border asymmetry.";
+                    messageInput.focus();
+                } catch (e) {
+                    alert("Could not load sample Skin Lesion. Please attach manually via paperclip.");
+                }
+            });
+        }
 
         // Auto-expand textarea
         messageInput.addEventListener('input', function() {
@@ -542,7 +806,7 @@
             bubble.className = 'message-bubble user-bubble';
             let content = '';
             if (imgSrc) {
-                content += `<div class="mb-2"><img src="${imgSrc}" class="img-fluid rounded" style="max-height: 160px;"></div>`;
+                content += `<div class="mb-2"><img src="${imgSrc}" class="img-fluid rounded" style="max-height: 180px;"></div>`;
             }
             if (text) {
                 content += `<div>${escapeHtml(text)}</div>`;
@@ -570,7 +834,7 @@
 
             if (data.result_image) {
                 html += `
-                    <div class="mt-2">
+                    <div class="mt-3">
                         <strong class="d-block small text-muted mb-1"><i class="fas fa-microscope text-primary me-1"></i>Diagnostic Overlay / Segmentation Mask:</strong>
                         <img src="${data.result_image}" class="result-artifact-img" alt="Diagnostic Result" onclick="window.open(this.src)">
                     </div>
@@ -579,11 +843,11 @@
 
             if (data.needs_validation) {
                 html += `
-                    <div class="mt-3 p-3 bg-light border rounded">
-                        <span class="small fw-bold d-block text-secondary mb-2"><i class="fas fa-user-check text-success me-1"></i> Clinician Verification Panel:</span>
+                    <div class="mt-3 p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft);">
+                        <strong class="d-block text-warning small mb-2"><i class="fas fa-triangle-exclamation me-1"></i> Clinician Verification Required:</strong>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-success btn-validate" data-action="confirm"><i class="fas fa-check me-1"></i> Confirm Inference</button>
-                            <button class="btn btn-sm btn-outline-danger btn-validate" data-action="reject"><i class="fas fa-flag me-1"></i> Flag for Review</button>
+                            <button class="btn btn-sm btn-outline-success btn-hitl" data-action="confirm"><i class="fas fa-check me-1"></i> Confirm Inference</button>
+                            <button class="btn btn-sm btn-outline-danger btn-hitl" data-action="flag"><i class="fas fa-flag me-1"></i> Flag for Secondary Review</button>
                         </div>
                     </div>
                 `;
@@ -593,10 +857,10 @@
             chatBody.appendChild(bubble);
             chatBody.scrollTop = chatBody.scrollHeight;
 
-            // Wire validation buttons
-            bubble.querySelectorAll('.btn-validate').forEach(b => {
-                b.addEventListener('click', async function() {
-                    const action = this.getAttribute('data-action');
+            // Bind Human-in-the-Loop buttons
+            bubble.querySelectorAll('.btn-hitl').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const action = e.currentTarget.getAttribute('data-action');
                     const form = new FormData();
                     form.append('validation_result', action);
                     const vRes = await fetch('/validate', { method: 'POST', body: form });
@@ -659,8 +923,7 @@
             alert("SOAP Note copied to clipboard!");
         });
 
-
-        // Voice Recording via ElevenLabs/MediaRecorder
+        // Voice Recording via MediaRecorder
         btnVoiceRecord.addEventListener('click', async () => {
             if (!isRecording) {
                 try {

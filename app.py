@@ -49,6 +49,8 @@ for directory in [UPLOAD_FOLDER, FRONTEND_UPLOAD_FOLDER, SKIN_LESION_OUTPUT, BRA
 # Mount static asset routes
 app.mount("/data", StaticFiles(directory="data"), name="data")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+if os.path.exists("sample_images"):
+    app.mount("/sample_images", StaticFiles(directory="sample_images"), name="sample_images")
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
