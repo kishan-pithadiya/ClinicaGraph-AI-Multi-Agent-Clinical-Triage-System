@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClinicaGraph AI - Clinical Triage System</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-4H7V10h4V6h2v4h4v2h-4v4z'/></svg>">
+    
+    <!-- Bootstrap 5 & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        :root {
+            --primary-med: #0284c7;
+            --primary-dark: #0369a1;
+            --bg-canvas: #f8fafc;
+            --card-surface: #ffffff;
+            --border-soft: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--bg-canvas);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-main);
+        }
+
+        .main-shell {
+            max-width: 1400px;
+            margin: 0 auto;
+            height: 94vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-brand-custom {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            color: var(--primary-med);
+            letter-spacing: -0.02em;
+        }
+
+        .pulse-status {
+            width: 9px;
+            height: 9px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .sidebar-card {
+            background: var(--card-surface);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 18px;
+            height: 100%;
+            overflow-y: auto;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .chat-panel {
+            background: var(--card-surface);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            overflow: hidden;
+        }
+
+        .chat-body-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message-bubble {
+            max-width: 82%;
+            padding: 14px 18px;
+            border-radius: 14px;
+            line-height: 1.55;
+            font-size: 0.95rem;
+            position: relative;
+        }
+
+        .user-bubble {
+            align-self: flex-end;
+            background-color: #0284c7;
+            color: #ffffff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .assistant-bubble {
+            align-self: flex-start;
+            background-color: #ffffff;
+            border: 1px solid var(--border-soft);
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .badge-agent {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 6px;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .badge-urgency {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .urgency-critical { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+        .urgency-urgent { background: #ffedd5; color: #ea580c; border: 1px solid #fdba74; }
+        .urgency-routine { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .urgency-informational { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        .chat-footer-bar {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border-soft);
+            background: #ffffff;
+        }
+
+        .input-composer {
+            border: 1px solid var(--border-soft);
+            border-radius: 24px;
+            padding: 10px 18px;
+            resize: none;
+            outline: none;
+            max-height: 120px;
+        }
+
+        .input-composer:focus {
+            border-color: var(--primary-med);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        .btn-action-round {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .preview-tray {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .preview-thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-soft);
+        }
+
+        .result-artifact-img {
+            max-width: 100%;
+            max-height: 380px;
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            margin-top: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+        }
+
+        .soap-section {
+            background: #f8fafc;
+            border-left: 4px solid var(--primary-med);
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--primary-med);
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-2 p-md-3">
+
+<div class="main-shell">
+    <!-- Top Navigation Header -->
+    <header class="d-flex justify-content-between align-items-center mb-3 px-2">
+        <div class="navbar-brand-custom">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#0284c7">
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-4H7V10h4V6h2v4h4v2h-4v4z"/>
+            </svg>
+            <div>
+                <h5 class="mb-0 fw-bold">ClinicaGraph AI</h5>
+                <small class="text-muted" style="font-size: 0.75rem;">Autonomous Multi-Agent Clinical Triage System</small>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-white text-secondary border px-3 py-2 d-none d-md-flex align-items-center gap-2" style="font-size: 0.8rem;">
+                <span class="pulse-status"></span> System Ready
+            </span>
+            <button class="btn btn-outline-primary btn-sm px-3 fw-semibold" id="btn-soap-modal" data-bs-toggle="modal" data-bs-target="#soapModal">
+                <i class="fas fa-file-medical me-1"></i> Clinical SOAP Note
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btn-clear-chat" title="Clear Consultation Transcript">
+                <i class="fas fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <div class="row g-3 flex-grow-1 overflow-hidden">
+        <!-- Clinical Left Sidebar -->
+        <aside class="col-lg-3 col-md-4 d-none d-md-block h-100">
+            <div class="sidebar-card">
+                <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Multi-Agent Orchestration</h6>
+                
+                <div class="mb-3">
+                    <div class="p-2 border rounded bg-light mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-compass text-primary"></i>
+                            <strong style="font-size: 0.85rem;">Supervisor & Triage</strong>
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">LangGraph router with urgency stratification (Critical / Urgent / Routine).</small>
+                    </div>
+
+                    <div class="p-2 border rounded bg-light mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-book-medical text-info"></i>
+                            <strong style="font-size: 0.85rem;">Evidence RAG Engine</strong>
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Qdrant vector retrieval + Cross-Encoder TinyBERT reranker.</small>
+                    </div>
+
+                    <div class="p-2 border rounded bg-light mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-globe-americas text-warning"></i>
+                            <strong style="font-size: 0.85rem;">PubMed & Web Search</strong>
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Real-time clinical literature & epidemic surveillance.</small>
+                    </div>
+
+                    <div class="p-2 border rounded bg-light mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-x-ray text-success"></i>
+                            <strong style="font-size: 0.85rem;">Multimodal Vision Pipeline</strong>
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Brain MRI segmentation, Chest X-Ray detection, Dermoscopy ABCD.</small>
+                    </div>
+
+                    <div class="p-2 border rounded bg-light mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-user-doctor text-danger"></i>
+                            <strong style="font-size: 0.85rem;">Human-in-the-Loop</strong>
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Mandatory clinical verification on automated diagnostic alerts.</small>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="fw-bold text-muted mb-2" style="font-size: 0.75rem;">Clinical Triage Legend</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge urgency-critical">Critical</span>
+                        <span class="badge urgency-urgent">Urgent</span>
+                        <span class="badge urgency-routine">Routine</span>
+                        <span class="badge urgency-informational">Info</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-2 bg-light border rounded text-muted" style="font-size: 0.7rem;">
+                    <i class="fas fa-shield-halved text-primary me-1"></i> HIPAA compliance mode active. Patient identifiers (PII/PHI) automatically masked.
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Panel -->
+        <main class="col-lg-9 col-md-8 col-12 h-100">
+            <div class="chat-panel">
+                <!-- Chat Feed -->
+                <div class="chat-body-area" id="chat-body">
+                    <!-- Welcome Initial Message -->
+                    <div class="message-bubble assistant-bubble">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="badge-agent"><i class="fas fa-shield-heart"></i> ClinicaGraph Supervisor</span>
+                            <span class="badge badge-urgency urgency-informational">System Ready</span>
+                        </div>
+                        <p class="mb-2 fw-medium">Welcome to ClinicaGraph AI Clinical Decision System.</p>
+                        <p class="mb-2 text-muted" style="font-size: 0.9rem;">
+                            I provide multi-agent clinical decision support, medical literature retrieval, and multimodal radiographic analysis.
+                        </p>
+                        <ul class="mb-0 text-muted ps-3" style="font-size: 0.85rem;">
+                            <li>Upload a <strong>Brain MRI</strong>, <strong>Chest X-Ray</strong>, or <strong>Skin Lesion</strong> for diagnostic segmentation.</li>
+                            <li>Inquire regarding oncology research, pulmonary pathologies, or COVID-19 management.</li>
+                            <li>Generate structured <strong>Clinical SOAP Notes</strong> at any point during consultation.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chat Composer Footer -->
+                <div class="chat-footer-bar">
+                    <!-- Attached image preview container -->
+                    <div class="preview-tray" id="preview-tray" style="display: none;">
+                        <img id="preview-img" class="preview-thumb" src="" alt="Preview">
+                        <div class="flex-grow-1">
+                            <span class="small fw-semibold text-truncate d-block" id="preview-name">image.png</span>
+                            <small class="text-muted" style="font-size: 0.72rem;">Image attached for diagnostic inference</small>
+                        </div>
+                        <button class="btn btn-sm btn-link text-danger p-0" id="btn-remove-attachment" title="Remove">
+                            <i class="fas fa-times-circle fs-5"></i>
+                        </button>
+                    </div>
+
+                    <form id="chat-form" class="d-flex align-items-center gap-2">
+                        <!-- File Upload Button -->
+                        <div class="position-relative">
+                            <input type="file" id="image-upload" accept="image/*" class="d-none">
+                            <button type="button" class="btn btn-outline-secondary btn-action-round" id="btn-trigger-upload" title="Attach Medical Image">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
+
+                        <!-- Voice Mic Button -->
+                        <button type="button" class="btn btn-outline-warning btn-action-round" id="btn-voice-record" title="Dictate Clinical Query">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+
+                        <!-- Text Input -->
+                        <textarea class="form-control input-composer flex-grow-1" id="message-input" rows="1" placeholder="Describe symptoms, ask a clinical question, or upload medical imaging..."></textarea>
+
+                        <!-- Send Button -->
+                        <button type="submit" class="btn btn-primary btn-action-round" id="btn-send-message" title="Submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- SOAP Note Modal -->
+<div class="modal fade" id="soapModal" tabindex="-1" aria-labelledby="soapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-bottom-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bold" id="soapModalLabel"><i class="fas fa-file-medical text-primary me-2"></i>Structured Clinical SOAP Note</h5>
+                    <small class="text-muted">Generated by ClinicaGraph Clinical Documentation Engine</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3" id="soap-modal-body">
+                <div class="text-center py-4 text-muted" id="soap-loading">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="small mb-0">Synthesizing consultation transcript into structured SOAP format...</p>
+                </div>
+                <div id="soap-content" style="display: none;">
+                    <div class="soap-section">
+                        <h6 class="fw-bold text-primary mb-1">S — Subjective</h6>
+                        <p class="mb-0 text-secondary" id="soap-s" style="font-size: 0.9rem;">-</p>
+                    </div>
+                    <div class="soap-section">
+                        <h6 class="fw-bold text-primary mb-1">O — Objective</h6>
+                        <p class="mb-0 text-secondary" id="soap-o" style="font-size: 0.9rem;">-</p>
+                    </div>
+                    <div class="soap-section">
+                        <h6 class="fw-bold text-primary mb-1">A — Assessment</h6>
+                        <p class="mb-0 text-secondary" id="soap-a" style="font-size: 0.9rem;">-</p>
+                    </div>
+                    <div class="soap-section">
+                        <h6 class="fw-bold text-primary mb-1">P — Plan</h6>
+                        <p class="mb-0 text-secondary" id="soap-p" style="font-size: 0.9rem;">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-copy-soap"><i class="fas fa-copy me-1"></i> Copy to Clipboard</button>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatBody = document.getElementById('chat-body');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const imageUpload = document.getElementById('image-upload');
+        const btnTriggerUpload = document.getElementById('btn-trigger-upload');
+        const previewTray = document.getElementById('preview-tray');
+        const previewImg = document.getElementById('preview-img');
+        const previewName = document.getElementById('preview-name');
+        const btnRemoveAttachment = document.getElementById('btn-remove-attachment');
+        const btnVoiceRecord = document.getElementById('btn-voice-record');
+        const btnClearChat = document.getElementById('btn-clear-chat');
+        const btnSoapModal = document.getElementById('btn-soap-modal');
+
+        let selectedFile = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        // Auto-expand textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Trigger file upload
+        btnTriggerUpload.addEventListener('click', () => imageUpload.click());
+
+        imageUpload.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                selectedFile = e.target.files[0];
+                previewName.textContent = selectedFile.name;
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    previewImg.src = re.target.result;
+                    previewTray.style.display = 'flex';
+                };
+                reader.readAsDataURL(selectedFile);
+            }
+        });
+
+        btnRemoveAttachment.addEventListener('click', () => {
+            selectedFile = null;
+            imageUpload.value = '';
+            previewTray.style.display = 'none';
+        });
+
+        btnClearChat.addEventListener('click', () => {
+            if (confirm("Reset current clinical consultation session?")) {
+                document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                location.reload();
+            }
+        });
+
+        // Handle Form Submit
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text && !selectedFile) return;
+
+            // Render User Bubble
+            renderUserMessage(text, selectedFile ? previewImg.src : null);
+
+            // Reset inputs
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            const fileToSend = selectedFile;
+            selectedFile = null;
+            imageUpload.value = '';
+            previewTray.style.display = 'none';
+
+            // Show typing indicator
+            const typingElem = showTypingIndicator();
+
+            try {
+                let resData;
+                if (fileToSend) {
+                    const formData = new FormData();
+                    formData.append('image', fileToSend);
+                    formData.append('text', text);
+                    const res = await fetch('/upload', { method: 'POST', body: formData });
+                    resData = await res.json();
+                } else {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: text })
+                    });
+                    resData = await res.json();
+                }
+
+                typingElem.remove();
+                renderAssistantMessage(resData);
+            } catch (err) {
+                typingElem.remove();
+                renderAssistantMessage({
+                    agent: "System Error",
+                    urgency: "CRITICAL",
+                    response: "A connection error occurred while contacting the ClinicaGraph multi-agent backend."
+                });
+            }
+        });
+
+        function renderUserMessage(text, imgSrc) {
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble user-bubble';
+            let content = '';
+            if (imgSrc) {
+                content += `<div class="mb-2"><img src="${imgSrc}" class="img-fluid rounded" style="max-height: 160px;"></div>`;
+            }
+            if (text) {
+                content += `<div>${escapeHtml(text)}</div>`;
+            }
+            bubble.innerHTML = content;
+            chatBody.appendChild(bubble);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function renderAssistantMessage(data) {
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble assistant-bubble';
+
+            const agentLabel = data.agent || 'ClinicaGraph Assistant';
+            const urgency = (data.urgency || 'ROUTINE').toLowerCase();
+            const urgencyClass = `urgency-${urgency}`;
+
+            let html = `
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge-agent"><i class="fas fa-stethoscope"></i> ${escapeHtml(agentLabel)}</span>
+                    <span class="badge badge-urgency ${urgencyClass}">${data.urgency || 'ROUTINE'}</span>
+                </div>
+                <div class="markdown-output">${marked.parse(data.response || '')}</div>
+            `;
+
+            if (data.result_image) {
+                html += `
+                    <div class="mt-2">
+                        <strong class="d-block small text-muted mb-1"><i class="fas fa-microscope text-primary me-1"></i>Diagnostic Overlay / Segmentation Mask:</strong>
+                        <img src="${data.result_image}" class="result-artifact-img" alt="Diagnostic Result" onclick="window.open(this.src)">
+                    </div>
+                `;
+            }
+
+            if (data.needs_validation) {
+                html += `
+                    <div class="mt-3 p-3 bg-light border rounded">
+                        <span class="small fw-bold d-block text-secondary mb-2"><i class="fas fa-user-check text-success me-1"></i> Clinician Verification Panel:</span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success btn-validate" data-action="confirm"><i class="fas fa-check me-1"></i> Confirm Inference</button>
+                            <button class="btn btn-sm btn-outline-danger btn-validate" data-action="reject"><i class="fas fa-flag me-1"></i> Flag for Review</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            bubble.innerHTML = html;
+            chatBody.appendChild(bubble);
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // Wire validation buttons
+            bubble.querySelectorAll('.btn-validate').forEach(b => {
+                b.addEventListener('click', async function() {
+                    const action = this.getAttribute('data-action');
+                    const form = new FormData();
+                    form.append('validation_result', action);
+                    const vRes = await fetch('/validate', { method: 'POST', body: form });
+                    const vData = await vRes.json();
+                    renderAssistantMessage({
+                        agent: "Human Validation Node",
+                        urgency: "ROUTINE",
+                        response: `${vData.header}\n\n${vData.response}`
+                    });
+                });
+            });
+        }
+
+        function showTypingIndicator() {
+            const ind = document.createElement('div');
+            ind.className = 'message-bubble assistant-bubble py-2 px-3 text-muted';
+            ind.innerHTML = `
+                <small class="me-2 fw-medium">ClinicaGraph agents coordinating</small>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            `;
+            chatBody.appendChild(ind);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            return ind;
+        }
+
+        // SOAP Note Synthesis
+        btnSoapModal.addEventListener('click', async () => {
+            const loading = document.getElementById('soap-loading');
+            const content = document.getElementById('soap-content');
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/soap-note', { method: 'POST' });
+                const data = await res.json();
+                const note = data.soap_note || {};
+
+                document.getElementById('soap-s').textContent = note.subjective || 'None recorded.';
+                document.getElementById('soap-o').textContent = note.objective || 'None recorded.';
+                document.getElementById('soap-a').textContent = note.assessment || 'None recorded.';
+                document.getElementById('soap-p').textContent = note.plan || 'None recorded.';
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            } catch (err) {
+                loading.innerHTML = '<p class="text-danger small mb-0">Failed to synthesize SOAP note.</p>';
+            }
+        });
+
+        // Copy SOAP Note
+        document.getElementById('btn-copy-soap').addEventListener('click', () => {
+            const s = document.getElementById('soap-s').textContent;
+            const o = document.getElementById('soap-o').textContent;
+            const a = document.getElementById('soap-a').textContent;
+            const p = document.getElementById('soap-p').textContent;
+            const fullNote = `CLINICAGRAPH CLINICAL SOAP NOTE\n\nS (Subjective):\n${s}\n\nO (Objective):\n${o}\n\nA (Assessment):\n${a}\n\nP (Plan):\n${p}`;
+            navigator.clipboard.writeText(fullNote);
+            alert("SOAP Note copied to clipboard!");
+        });
+
+
+        // Voice Recording via ElevenLabs/MediaRecorder
+        btnVoiceRecord.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = async () => {
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const form = new FormData();
+                        form.append('audio', blob, 'speech.webm');
+                        btnVoiceRecord.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        try {
+                            const res = await fetch('/transcribe', { method: 'POST', body: form });
+                            const data = await res.json();
+                            if (data.transcript) {
+                                messageInput.value = data.transcript;
+                                messageInput.focus();
+                            }
+                        } catch (e) {
+                            console.error("Transcription error:", e);
+                        } finally {
+                            btnVoiceRecord.innerHTML = '<i class="fas fa-microphone"></i>';
+                            btnVoiceRecord.classList.remove('btn-danger');
+                            btnVoiceRecord.classList.add('btn-outline-warning');
+                        }
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btnVoiceRecord.innerHTML = '<i class="fas fa-stop"></i>';
+                    btnVoiceRecord.classList.remove('btn-outline-warning');
+                    btnVoiceRecord.classList.add('btn-danger');
+                } catch (e) {
+                    alert("Microphone permission required for audio dictation.");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+            }
+        });
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    });
+</script>
+
+</body>
+</html>

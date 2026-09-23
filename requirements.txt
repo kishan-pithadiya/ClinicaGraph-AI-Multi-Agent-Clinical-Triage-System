@@ -1,0 +1,32 @@
+# Core Web Server & API
+fastapi>=0.110.0
+uvicorn>=0.28.0
+python-multipart>=0.0.9
+jinja2>=3.1.3
+pydantic>=2.7.0
+requests>=2.31.0
+werkzeug>=3.0.1
+python-dotenv>=1.0.1
+
+# LangChain & Multi-Agent Orchestration
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0
+
+# Vector Database & RAG
+qdrant-client>=1.10.0
+langchain-qdrant>=0.1.0
+sentence-transformers>=3.0.0
+
+# Computer Vision & Medical Diagnostics
+opencv-python>=4.9.0
+numpy>=1.26.0
+matplotlib>=3.8.0
+torch>=2.2.0
+torchvision>=0.17.0
+
+# Speech Processing (Optional)
+elevenlabs>=1.0.0
+pydub>=0.25.1
