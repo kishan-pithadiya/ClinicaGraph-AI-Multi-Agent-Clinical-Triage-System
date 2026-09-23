@@ -95,7 +95,11 @@ class SpeechRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the ClinicaGraph clinical dashboard."""
-    return templates.TemplateResponse("index.html", {"request": request, "config": config})
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"request": request, "config": config}
+    )
 
 
 @app.get("/health")
