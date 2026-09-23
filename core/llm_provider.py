@@ -34,9 +34,9 @@ class MockChatModel(Runnable):
             has_image = "has image: true" in prompt_str
 
             if has_image:
-                if "brain" in prompt_str or "mri" in prompt_str:
+                if "brain" in query_part or "mri" in query_part:
                     return AIMessage(content='{"agent": "BRAIN_TUMOR_AGENT", "urgency": "ROUTINE", "reasoning": "Detected brain MRI image attachment", "confidence": 0.96}')
-                elif "skin" in prompt_str or "lesion" in prompt_str or "rash" in prompt_str:
+                elif "skin" in query_part or "lesion" in query_part or "rash" in query_part:
                     return AIMessage(content='{"agent": "SKIN_LESION_AGENT", "urgency": "ROUTINE", "reasoning": "Detected dermatological image attachment", "confidence": 0.95}')
                 else:
                     return AIMessage(content='{"agent": "CHEST_XRAY_AGENT", "urgency": "ROUTINE", "reasoning": "Detected chest radiograph attachment", "confidence": 0.95}')

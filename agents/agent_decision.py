@@ -130,7 +130,7 @@ def create_agent_graph():
                     "messages": [msg],
                     "output": msg,
                     "agent_name": "SAFETY_GUARDRAIL",
-                    "urgency_level": "CRITICAL" if "EMERGENCY" in str(msg.content) else "ROUTINE",
+                    "urgency_level": "CRITICAL" if any(k in str(msg.content).upper() for k in ["CRITICAL", "EMERGENCY", "911", "ALERT"]) else "ROUTINE",
                     "has_image": False,
                     "bypass_routing": True
                 }
