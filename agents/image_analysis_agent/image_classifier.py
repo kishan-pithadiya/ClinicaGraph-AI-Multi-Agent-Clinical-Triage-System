@@ -52,19 +52,15 @@ class ImageClassifier:
                     }}
                     """
                 )},
-                {"type": "image_url", "image_url": {"url": self.local_image_to_data_url(image_path)}}  # Correct format
+                {"type": "image_url", "image_url": {"url": self.local_image_to_data_url(image_path)}}
             ]}
         ]
         
-        # Invoke LLM to classify the image
         response = self.vision_model.invoke(vision_prompt)
 
         try:
-            # Ensure the response is parsed as JSON
             response_json = self.json_parser.parse(response.content)
-            return response_json  # Returns a dictionary instead of a string
+            return response_json
         except json.JSONDecodeError:
             print("[ImageAnalyzer] Warning: Response was not valid JSON.")
             return {"image_type": "unknown", "reasoning": "Invalid JSON response", "confidence": 0.0}
-
-        # return response.content.strip().lower()

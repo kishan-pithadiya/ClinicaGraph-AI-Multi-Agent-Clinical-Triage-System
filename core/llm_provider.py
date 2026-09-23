@@ -1,11 +1,3 @@
-"""
-ClinicaGraph AI - Multi-Provider LLM & Embeddings Orchestration Engine
-Supports:
-- OpenAI (Direct API: gpt-4o, gpt-4o-mini, text-embedding-3-small)
-- Azure OpenAI (Enterprise deployments)
-- Fallback / Offline Mock provider for testing and deterministic validation
-"""
-
 import os
 import logging
 from typing import Optional, Any
@@ -20,7 +12,6 @@ logger = logging.getLogger("ClinicaGraph.LLMProvider")
 
 
 class MockChatModel(Runnable):
-    """Fallback simulated LLM provider for demonstration and offline testing."""
     def __init__(self, temperature: float = 0.2):
         super().__init__()
         self.temperature = temperature
@@ -28,7 +19,6 @@ class MockChatModel(Runnable):
     def invoke(self, input: Any, config: Optional[Any] = None, **kwargs) -> Any:
         prompt_str = str(input).lower()
         
-        # 1. Lead Clinical Triage Supervisor Router
         if "which agent should handle" in prompt_str or "lead clinical triage supervisor" in prompt_str or "supervisor_system_prompt" in prompt_str:
             query_part = prompt_str.split("query:")[-1].split("has image:")[0].strip() if "query:" in prompt_str else prompt_str
             has_image = "has image: true" in prompt_str
@@ -41,7 +31,6 @@ class MockChatModel(Runnable):
                 else:
                     return AIMessage(content='{"agent": "CHEST_XRAY_AGENT", "urgency": "ROUTINE", "reasoning": "Detected chest radiograph attachment", "confidence": 0.95}')
             
-            # Text queries:
             if any(term in query_part for term in ["brain tumor", "glioma", "meningioma"]):
                 return AIMessage(content='{"agent": "RAG_AGENT", "urgency": "ROUTINE", "reasoning": "Clinical literature retrieval required for neuro-oncology", "confidence": 0.92}')
             elif any(term in query_part for term in ["outbreak", "covid stats", "latest research", "new drug", "news"]):
@@ -51,14 +40,12 @@ class MockChatModel(Runnable):
             else:
                 return AIMessage(content='{"agent": "CONVERSATION_AGENT", "urgency": "INFORMATIONAL", "reasoning": "Standard clinical consultation interaction", "confidence": 0.95}')
 
-        # 2. Guardrail Prompt Response
         if "content safety filter" in prompt_str:
             user_part = prompt_str.split("user input:")[-1].split("unsafe criteria:")[0] if "user input:" in prompt_str else prompt_str
             if any(term in user_part for term in ["suicide", "kill myself", "harm myself", "lethal dose", "make a bomb", "cyanide"]):
                 return "UNSAFE: Harmful or self-harm content detected. Please contact emergency services immediately (988 / 911)."
             return "SAFE"
 
-        # 3. Vision Modality Classifier
         if "classify it as" in prompt_str:
             if "brain" in prompt_str or "mri" in prompt_str:
                 return AIMessage(content='{"image_type": "BRAIN MRI", "reasoning": "Cranial axial slice MRI characteristics identified", "confidence": 0.95}')
@@ -67,7 +54,6 @@ class MockChatModel(Runnable):
             else:
                 return AIMessage(content='{"image_type": "CHEST X-RAY", "reasoning": "Pulmonary radiographic view identified", "confidence": 0.95}')
 
-        # 4. Clinical SOAP Note Generator
         if "soap" in prompt_str or "subjective" in prompt_str:
             transcript = prompt_str.split("consultation transcript:")[-1].lower() if "consultation transcript:" in prompt_str else prompt_str
             
@@ -100,7 +86,6 @@ class MockChatModel(Runnable):
                     "plan": "1. Correlate with attending physician evaluation. 2. Monitor vital signs and report progression. 3. Proceed with targeted diagnostic labs if symptomatic."
                 }''')
 
-        # Extract user query if wrapped in prompt templates
         if "user:" in prompt_str:
             target_query = prompt_str.split("user:")[-1].split("clinical guidelines:")[0].strip()
         elif "query:" in prompt_str:
@@ -108,9 +93,6 @@ class MockChatModel(Runnable):
         else:
             target_query = prompt_str
 
-        # 5. Question-Specific Clinical Responses
-
-        # A. Respiratory Pathogen Surveillance & Variants (2024-2026)
         if any(w in target_query for w in ["surveillance", "variant", "pathogen", "outbreak", "respiratory", "jn.1", "kp.2", "kp.3", "flirt"]):
             return AIMessage(content=(
                 "### Global Respiratory Pathogen Surveillance & Variant Analysis (2024-2026)\n\n"
@@ -130,7 +112,6 @@ class MockChatModel(Runnable):
                 "*Notice: Epidemiological surveillance models are ground-truthed with global wastewater telemetry and genomic sequencing repositories.*"
             ))
 
-        # B. Chest Radiography (CXR) Techniques
         if "chest x-ray" in target_query or "chest xray" in target_query or "cxr" in target_query:
             return AIMessage(content=(
                 "### Diagnostic Modalities in Chest Radiography (CXR)\n\n"
@@ -150,7 +131,6 @@ class MockChatModel(Runnable):
                 "*Clinical Note: Automated radiographic AI findings require human-in-the-loop validation by a licensed radiologist.*"
             ))
 
-        # C. COVID-19 Pneumonia Criteria & Symptoms
         if any(w in target_query for w in ["covid", "pneumonia", "consolidation", "infiltrate"]):
             return AIMessage(content=(
                 "### Clinical & Radiographic Criteria for COVID-19 Pneumonia\n\n"
@@ -169,7 +149,6 @@ class MockChatModel(Runnable):
                 "*Recommendation: Correlate radiographic imaging with supplemental oxygen needs and arterial blood gas (ABG) analysis.*"
             ))
 
-        # D. ABCD Rule for Dermoscopy & Skin Lesions
         if any(w in target_query for w in ["abcd", "skin lesion", "melanoma", "dermoscopy", "mole"]):
             return AIMessage(content=(
                 "### The ABCD Rule in Clinical Dermoscopy & Melanoma Screening\n\n"
@@ -185,7 +164,6 @@ class MockChatModel(Runnable):
                 "*ClinicaGraph Diagnostic Vision uses U-Net segmentation to automatically compute border contour eccentricity and pigment symmetry.*"
             ))
 
-        # E. Brain MRI Segmentation & Neuro-Radiology
         if any(w in target_query for w in ["brain", "mri", "tumor", "glioma", "segmentation", "neuro"]):
             return AIMessage(content=(
                 "### Neuro-Radiology Brain MRI Segmentation Protocol\n\n"
@@ -201,7 +179,6 @@ class MockChatModel(Runnable):
                 "*Notice: Upload any cranial MRI scan via the 1-Click Samples or attachment button to generate live contour masks.*"
             ))
 
-        # F. Greetings
         if target_query.strip() in ["hi", "hello", "hey", "greetings"]:
             return AIMessage(content=(
                 "Hello! I am **ClinicaGraph AI**, your multi-agent clinical decision support system.\n\n"
@@ -211,7 +188,6 @@ class MockChatModel(Runnable):
                 "- **Documentation**: Click **Clinical SOAP Note** above at any point to synthesize our session into an EHR-ready summary."
             ))
 
-        # G. Dynamic Clinical Response for any other question
         return AIMessage(content=(
             f"### ClinicaGraph Clinical Assessment\n\n"
             f"**Regarding your clinical inquiry on {target_query[:60]}:**\n\n"
@@ -225,7 +201,6 @@ class MockChatModel(Runnable):
 
 
 class MockEmbeddings(Embeddings):
-    """Fallback simulated embedding generator generating deterministic 1536-dim vectors."""
     def __init__(self, dim: int = 1536):
         self.dim = dim
 
@@ -241,16 +216,8 @@ class MockEmbeddings(Embeddings):
 
 
 def get_llm(temperature: float = 0.2, streaming: bool = False):
-    """
-    Dynamically instantiate the appropriate LLM based on environment configuration.
-    Priority:
-    1. Azure OpenAI (if deployment_name and azure_endpoint are provided)
-    2. Direct OpenAI (if OPENAI_API_KEY is present)
-    3. MockChatModel (fallback mode for offline execution/demos)
-    """
     provider = os.getenv("LLM_PROVIDER", "auto").lower()
 
-    # 1. Check Azure OpenAI
     if provider == "azure" or (
         provider == "auto" 
         and os.getenv("azure_endpoint") 
@@ -270,7 +237,6 @@ def get_llm(temperature: float = 0.2, streaming: bool = False):
         except Exception as e:
             logger.warning(f"Could not initialize AzureChatOpenAI: {e}. Falling back...")
 
-    # 2. Check Direct OpenAI
     openai_key = os.getenv("OPENAI_API_KEY") or (
         os.getenv("openai_api_key") if not os.getenv("azure_endpoint") else None
     )
@@ -287,18 +253,12 @@ def get_llm(temperature: float = 0.2, streaming: bool = False):
         except Exception as e:
             logger.warning(f"Could not initialize ChatOpenAI: {e}. Falling back...")
 
-    # 3. Fallback / Mock
-    logger.info("Initializing ClinicaGraph Offline/Mock Chat Provider.")
     return MockChatModel(temperature=temperature)
 
 
 def get_embeddings():
-    """
-    Dynamically instantiate embeddings model based on environment configuration.
-    """
     provider = os.getenv("LLM_PROVIDER", "auto").lower()
 
-    # 1. Check Azure
     if provider == "azure" or (
         provider == "auto" 
         and os.getenv("embedding_azure_endpoint") 
@@ -316,7 +276,6 @@ def get_embeddings():
         except Exception as e:
             logger.warning(f"Could not initialize AzureOpenAIEmbeddings: {e}. Falling back...")
 
-    # 2. Direct OpenAI
     openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("openai_api_key")
     if provider == "openai" or (provider == "auto" and openai_key):
         try:
@@ -328,8 +287,6 @@ def get_embeddings():
         except Exception as e:
             logger.warning(f"Could not initialize OpenAIEmbeddings: {e}. Falling back...")
 
-    # 3. Fallback Mock Embeddings
-    logger.info("Initializing ClinicaGraph Offline/Mock Embeddings Provider.")
     return MockEmbeddings()
 
 

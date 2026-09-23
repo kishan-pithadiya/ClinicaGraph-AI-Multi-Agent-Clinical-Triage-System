@@ -1,17 +1,9 @@
-"""
-ClinicaGraph AI - Clinical Guardrails & Safety Auditing Module
-Provides multi-tiered protection:
-1. Fast-Path Deterministic Rule Filter (Emergency triage, PII de-identification, Prompt Injection Defense)
-2. Semantic LLM Guardrail (Ethical non-prescriptive medical validation)
-"""
-
 import re
 from typing import Tuple, Any, Optional, Dict, List
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# Emergency triage keywords requiring immediate escalation
 EMERGENCY_KEYWORDS = [
     r"\b(chest pain|heart attack|myocardial infarction)\b",
     r"\b(stroke|facial droop|slurred speech|sudden numbness)\b",
@@ -20,7 +12,6 @@ EMERGENCY_KEYWORDS = [
     r"\b(massive bleeding|coughing blood|unconscious)\b"
 ]
 
-# Prompt injection & jailbreak patterns
 INJECTION_PATTERNS = [
     r"(ignore (all )?(previous|prior) instructions)",
     r"(reveal (your )?(system|internal) prompt)",
@@ -32,14 +23,11 @@ INJECTION_PATTERNS = [
 
 
 class LocalGuardrails:
-    """Multi-tiered clinical safety filter with fast-path deterministic matching and semantic guardrails."""
-    
     def __init__(self, llm):
         self.llm = llm
         self._init_chains()
 
     def _init_chains(self):
-        # Semantic input review prompt (allows clinical inquiries, research, source citations)
         self.input_check_prompt = PromptTemplate.from_template(
             """You are a content safety filter for ClinicaGraph AI, an intelligent clinical decision support system.
             Evaluate whether the user input is safe and appropriate for healthcare assistance:
@@ -59,7 +47,6 @@ class LocalGuardrails:
             """
         )
 
-        # Output compliance filter
         self.output_check_prompt = PromptTemplate.from_template(
             """You are a clinical quality assurance filter for ClinicaGraph AI.
             Review the following generated response to ensure safety, professionalism, and ethical compliance:
@@ -88,13 +75,8 @@ class LocalGuardrails:
             self.output_chain = None
 
     def fast_path_check(self, user_input: str) -> Tuple[bool, str, str]:
-        """
-        Fast-path regex evaluations for sub-millisecond safety triage.
-        Returns: (is_allowed, category, message)
-        """
         text_lower = user_input.lower()
 
-        # 1. Emergency Detection
         for pattern in EMERGENCY_KEYWORDS:
             if re.search(pattern, text_lower):
                 emergency_msg = (
@@ -108,7 +90,6 @@ class LocalGuardrails:
                 )
                 return False, "EMERGENCY", emergency_msg
 
-        # 2. Prompt Injection Defense
         for pattern in INJECTION_PATTERNS:
             if re.search(pattern, text_lower):
                 return False, "SECURITY", "Request rejected by ClinicaGraph Security Guardrail: Adversarial or invalid instruction pattern detected."
@@ -116,28 +97,18 @@ class LocalGuardrails:
         return True, "SAFE", ""
 
     def anonymize_phi(self, text: str) -> str:
-        """Mask common Personally Identifiable Information (PII/PHI) for HIPAA compliance."""
-        # Mask SSN
         text = re.sub(r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED_SSN]", text)
-        # Mask Phone numbers
         text = re.sub(r"\b(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b", "[REDACTED_PHONE]", text)
-        # Mask Emails
         text = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b", "[REDACTED_EMAIL]", text)
         return text
 
     def check_input(self, user_input: str) -> Tuple[bool, Any]:
-        """
-        Check if user input passes clinical safety filters.
-        """
-        # Run fast path first
         is_allowed, category, message = self.fast_path_check(user_input)
         if not is_allowed:
             return False, AIMessage(content=message)
 
-        # Anonymize PII
         cleaned_input = self.anonymize_phi(user_input)
 
-        # If semantic chain is available, run secondary check
         if self.input_chain:
             try:
                 result = self.input_chain.invoke({"input": cleaned_input})
@@ -145,19 +116,15 @@ class LocalGuardrails:
                     reason = result.split(":", 1)[1].strip() if ":" in result else "Content policy restriction"
                     return False, AIMessage(content=f"Request flagged by ClinicaGraph Clinical Safety: {reason}")
             except Exception:
-                pass  # Fall back to safe if LLM call is unavailable
+                pass
 
         return True, cleaned_input
 
     def check_output(self, output: Any, user_input: str = "") -> str:
-        """
-        Process the model's output through safety validation.
-        """
         if not output:
             return ""
         output_text = output if isinstance(output, str) else getattr(output, 'content', str(output))
 
-        # Append standard non-prescriptive disclaimer if missing
         disclaimer = "\n\n*Notice: ClinicaGraph provides clinical decision support. Always consult a licensed clinician for medical diagnosis.*"
         if "ClinicaGraph" not in output_text and "consult" not in output_text.lower():
             output_text += disclaimer

@@ -1,10 +1,3 @@
-"""
-ClinicaGraph AI - FastAPI Application Server
-Provides secure REST endpoints for multi-agent clinical decision support,
-multimodal diagnostic image inference, human-in-the-loop validation,
-audio transcription/synthesis, and automated SOAP note generation.
-"""
-
 import os
 import uuid
 import glob
@@ -29,14 +22,12 @@ from agents.agent_decision import process_query, synthesize_clinical_soap_note
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("ClinicaGraph.Server")
 
-# Initialize FastAPI app
 app = FastAPI(
     title="ClinicaGraph AI: Multi-Agent Clinical Triage System",
     description="Autonomous Multimodal Clinical Decision Support and Multi-Agent Triage Platform",
     version="3.0.0"
 )
 
-# Storage directories
 UPLOAD_FOLDER = "uploads/backend"
 FRONTEND_UPLOAD_FOLDER = "uploads/frontend"
 SKIN_LESION_OUTPUT = "uploads/skin_lesion_output"
@@ -46,7 +37,6 @@ SPEECH_DIR = "uploads/speech"
 for directory in [UPLOAD_FOLDER, FRONTEND_UPLOAD_FOLDER, SKIN_LESION_OUTPUT, BRAIN_TUMOR_OUTPUT, SPEECH_DIR]:
     os.makedirs(directory, exist_ok=True)
 
-# Mount static asset routes
 app.mount("/data", StaticFiles(directory="data"), name="data")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 if os.path.exists("sample_images"):
@@ -56,7 +46,6 @@ if os.path.exists("assets"):
 
 templates = Jinja2Templates(directory="templates")
 
-# ElevenLabs client initialization (if key provided)
 eleven_client = None
 if config.speech.eleven_labs_api_key:
     try:
@@ -71,7 +60,6 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def cleanup_old_audio():
-    """Background garbage collector for speech artifacts."""
     while True:
         try:
             for f in glob.glob(f"{SPEECH_DIR}/*.mp3") + glob.glob(f"{SPEECH_DIR}/*.webm"):
@@ -96,7 +84,6 @@ class SpeechRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    """Serve the ClinicaGraph clinical dashboard."""
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -106,7 +93,6 @@ async def index(request: Request):
 
 @app.get("/health")
 def health_check():
-    """Service health probe."""
     return {
         "status": "healthy",
         "system": "ClinicaGraph AI",
@@ -117,7 +103,6 @@ def health_check():
 
 @app.get("/api/system-status")
 def system_status():
-    """Returns runtime diagnostic metrics for clinical telemetry."""
     return {
         "system": "ClinicaGraph AI Clinical Decision System",
         "version": "3.0.0",
@@ -144,7 +129,6 @@ def chat(
     response: Response, 
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process clinical text queries through the ClinicaGraph multi-agent state machine."""
     current_session = request.session_id or session_id or str(uuid.uuid4())
     response.set_cookie(key="session_id", value=current_session)
 
@@ -167,8 +151,6 @@ def chat(
             "needs_validation": response_data.get("needs_human_validation", False)
         }
 
-
-        # Check for generated image
         if response_data.get("result_image"):
             result["result_image"] = response_data["result_image"]
 
@@ -185,7 +167,6 @@ async def upload_image(
     text: str = Form(""),
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process multimodal diagnostic image uploads (Brain MRI, Chest X-Ray, Dermoscopy)."""
     if not allowed_file(image.filename):
         return JSONResponse(
             status_code=400,
@@ -231,7 +212,6 @@ async def upload_image(
             "needs_validation": response_data.get("needs_human_validation", True)
         }
 
-        # Check for visualization artifact
         if response_data.get("result_image"):
             result["result_image"] = response_data["result_image"]
         elif os.path.exists(os.path.join(SKIN_LESION_OUTPUT, "segmentation_plot.png")):
@@ -239,7 +219,6 @@ async def upload_image(
         elif os.path.exists(os.path.join(BRAIN_TUMOR_OUTPUT, "mri_segmentation.png")):
             result["result_image"] = "/uploads/brain_tumor_output/mri_segmentation.png"
 
-        # Cleanup input file
         try:
             os.remove(file_path)
         except Exception:
@@ -258,7 +237,6 @@ def validate_output(
     comments: Optional[str] = Form(None),
     session_id: Optional[str] = Cookie(None)
 ):
-    """Clinical Human-in-the-Loop verification endpoint."""
     current_session = session_id or str(uuid.uuid4())
     response.set_cookie(key="session_id", value=current_session)
 
@@ -295,7 +273,6 @@ def generate_soap_note(
     request: Request,
     session_id: Optional[str] = Cookie(None)
 ):
-    """Synthesizes structured clinical SOAP note from session transcript."""
     current_session = session_id or "default_session"
     try:
         soap_data = synthesize_clinical_soap_note(session_id=current_session)
@@ -311,7 +288,6 @@ def generate_soap_note(
 
 @app.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
-    """Transcribes verbal patient history using ElevenLabs Speech-to-Text."""
     if not eleven_client:
         return JSONResponse(status_code=503, content={"error": "Speech service unconfigured"})
 
@@ -330,7 +306,6 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
 @app.post("/generate-speech")
 async def generate_speech(request: SpeechRequest):
-    """Synthesizes clinical auditory feedback."""
     if not config.speech.eleven_labs_api_key:
         return JSONResponse(status_code=503, content={"error": "ElevenLabs API key not configured"})
 

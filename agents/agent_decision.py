@@ -1,15 +1,3 @@
-"""
-ClinicaGraph AI - Autonomous Multi-Agent Orchestration & Clinical Triage System
-
-Orchestrates specialized medical intelligence agents using LangGraph:
-- Clinical Urgency Stratification (Triage Engine)
-- RAG Specialist Agent (Vector search & cross-encoder reranking over medical corpus)
-- Web Search Processor Agent (PubMed & Tavily real-time clinical literature)
-- Multimodal Imaging Agents (Brain MRI, Chest X-Ray, Dermoscopic Lesion)
-- Conversational Clinical Assistant
-- Human-in-the-Loop Validation & Fast-Path Guardrails
-"""
-
 import json
 import logging
 from typing import Dict, List, Optional, Any, TypedDict, Union
@@ -27,20 +15,17 @@ from agents.guardrails.local_guardrails import LocalGuardrails
 
 logger = logging.getLogger("ClinicaGraph.AgentDecision")
 
-# Thread memory saver for multi-session support
 memory = MemorySaver()
 
 
 class ClinicalDecision(TypedDict):
-    """Structured output from the supervisor triage router."""
     agent: str
-    urgency: str  # CRITICAL, URGENT, ROUTINE, INFORMATIONAL
+    urgency: str
     reasoning: str
     confidence: float
 
 
 class AgentState(MessagesState):
-    """Execution state propagated through the ClinicaGraph LangGraph pipeline."""
     agent_name: Optional[str]
     current_input: Optional[Union[str, Dict]]
     has_image: bool
@@ -55,8 +40,6 @@ class AgentState(MessagesState):
 
 
 class AgentConfig:
-    """Orchestration prompts and shared sub-agent instances."""
-    
     CONFIDENCE_THRESHOLD = config.agent_decision.confidence_threshold
     
     SUPERVISOR_SYSTEM_PROMPT = """You are the Lead Clinical Triage Supervisor for ClinicaGraph AI, an autonomous clinical decision support platform.
@@ -114,14 +97,12 @@ def create_agent_graph():
     ])
     decision_chain = decision_prompt | decision_model | json_parser
 
-    # Node: Input analysis & fast guardrails
     def analyze_input(state: AgentState) -> AgentState:
         current_input = state.get("current_input", "")
         has_image = False
         image_type = None
         input_text = current_input if isinstance(current_input, str) else current_input.get("text", "")
 
-        # Guardrail check
         if input_text:
             is_allowed, msg = guardrails.check_input(input_text)
             if not is_allowed:
@@ -135,7 +116,6 @@ def create_agent_graph():
                     "bypass_routing": True
                 }
 
-        # Check for image input
         if isinstance(current_input, dict) and "image" in current_input:
             has_image = True
             image_path = current_input.get("image")
@@ -156,7 +136,6 @@ def create_agent_graph():
     def check_if_bypassing(state: AgentState) -> str:
         return "apply_guardrails" if state.get("bypass_routing", False) else "route_to_agent"
 
-    # Node: Supervisor Router
     def route_to_agent(state: AgentState) -> Dict:
         messages = state.get("messages", [])
         current_input = state.get("current_input", "")
@@ -165,7 +144,6 @@ def create_agent_graph():
 
         input_text = current_input if isinstance(current_input, str) else current_input.get("text", "")
         
-        # Build concise conversation history
         recent_history = ""
         for m in messages[-6:]:
             speaker = "Clinician/Patient" if isinstance(m, HumanMessage) else "ClinicaGraph"
@@ -211,7 +189,6 @@ def create_agent_graph():
         
         return {"agent_state": updated_state, "next": selected_agent}
 
-    # Node: Conversational Agent
     def run_conversation_agent(state: AgentState) -> AgentState:
         current_input = state.get("current_input", "")
         input_text = current_input if isinstance(current_input, str) else current_input.get("text", "")
@@ -233,13 +210,11 @@ def create_agent_graph():
             "agent_name": "CONVERSATION_AGENT"
         }
 
-    # Node: RAG Specialist Agent
     def run_rag_agent(state: AgentState) -> AgentState:
         query = state.get("current_input", "")
         query_text = query if isinstance(query, str) else query.get("text", "")
         rag_agent = MedicalRAG(config)
 
-        # Build context
         recent_context = ""
         for m in state.get("messages", [])[-6:]:
             recent_context += f"{m.content}\n"
@@ -263,7 +238,6 @@ def create_agent_graph():
             "agent_name": "RAG_AGENT"
         }
 
-    # Node: Web Search Processor Agent
     def run_web_search_processor_agent(state: AgentState) -> AgentState:
         query = state.get("current_input", "")
         query_text = query if isinstance(query, str) else query.get("text", "")
@@ -277,14 +251,12 @@ def create_agent_graph():
             "agent_name": involved
         }
 
-    # Conditional Routing for RAG -> Web Search fallback
     def confidence_based_routing(state: AgentState) -> str:
         if (state.get("retrieval_confidence", 0.0) < config.rag.min_retrieval_confidence or 
             state.get("insufficient_info", False)):
             return "WEB_SEARCH_PROCESSOR_AGENT"
         return "check_validation"
 
-    # Node: Brain Tumor MRI Agent
     def run_brain_tumor_agent(state: AgentState) -> AgentState:
         current_input = state.get("current_input", {})
         image_path = current_input.get("image") if isinstance(current_input, dict) else None
@@ -310,7 +282,6 @@ def create_agent_graph():
             "agent_name": "BRAIN_TUMOR_AGENT"
         }
 
-    # Node: Chest X-Ray Agent
     def run_chest_xray_agent(state: AgentState) -> AgentState:
         current_input = state.get("current_input", {})
         image_path = current_input.get("image") if isinstance(current_input, dict) else None
@@ -336,7 +307,6 @@ def create_agent_graph():
             "agent_name": "CHEST_XRAY_AGENT"
         }
 
-    # Node: Skin Lesion Agent
     def run_skin_lesion_agent(state: AgentState) -> AgentState:
         current_input = state.get("current_input", {})
         image_path = current_input.get("image") if isinstance(current_input, dict) else None
@@ -358,8 +328,6 @@ def create_agent_graph():
             "agent_name": "SKIN_LESION_AGENT"
         }
 
-
-    # Node: Human Validation Handling
     def handle_human_validation(state: AgentState) -> Dict:
         if state.get("needs_human_validation", False):
             return {"agent_state": state, "next": "human_validation"}
@@ -379,7 +347,6 @@ def create_agent_graph():
             "agent_name": f"{state.get('agent_name', '')} [Awaiting Validation]"
         }
 
-    # Node: Guardrails Sanitizer
     def apply_output_guardrails(state: AgentState) -> AgentState:
         output = state.get("output")
         if not output:
@@ -398,7 +365,6 @@ def create_agent_graph():
             "output": msg
         }
 
-    # Build Graph
     workflow = StateGraph(AgentState)
     workflow.add_node("analyze_input", analyze_input)
     workflow.add_node("route_to_agent", route_to_agent)
@@ -446,7 +412,6 @@ def create_agent_graph():
     return workflow.compile(checkpointer=memory)
 
 
-# Compile singleton graph instance
 _compiled_graph = None
 
 def get_graph():
@@ -457,7 +422,6 @@ def get_graph():
 
 
 def init_agent_state() -> AgentState:
-    """Initializes empty state."""
     return {
         "messages": [],
         "agent_name": None,
@@ -475,9 +439,6 @@ def init_agent_state() -> AgentState:
 
 
 def process_query(query: Union[str, Dict], session_id: str = "default_session") -> Dict[str, Any]:
-    """
-    Executes patient/clinician query with thread-isolated session memory.
-    """
     graph = get_graph()
     thread_config = {"configurable": {"thread_id": session_id}}
 
@@ -489,7 +450,6 @@ def process_query(query: Union[str, Dict], session_id: str = "default_session") 
 
     result = graph.invoke(state, thread_config)
 
-    # Maintain history window
     if len(result.get("messages", [])) > config.max_conversation_history:
         result["messages"] = result["messages"][-config.max_conversation_history:]
 
@@ -497,13 +457,9 @@ def process_query(query: Union[str, Dict], session_id: str = "default_session") 
 
 
 def synthesize_clinical_soap_note(session_id: str = "default_session") -> Dict[str, str]:
-    """
-    Generates a structured Clinical SOAP Note from the current session dialogue.
-    """
     thread_config = {"configurable": {"thread_id": session_id}}
     graph = get_graph()
     
-    # Retrieve checkpoint state
     try:
         current_state = graph.get_state(thread_config)
         messages = current_state.values.get("messages", [])
@@ -527,7 +483,6 @@ def synthesize_clinical_soap_note(session_id: str = "default_session") -> Dict[s
         llm = config.agent_decision.llm
         raw_res = llm.invoke(prompt)
         text = raw_res.content if hasattr(raw_res, 'content') else str(raw_res)
-        # Clean json backticks if present
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:

@@ -118,26 +118,21 @@ class MedicalRAG:
         self.logger.info(f"Ingesting file: {document_path}")
 
         try:
-            # Step 1: Parse document
             self.logger.info("1. Parsing document and extracting images...")
             parsed_document, images = self.doc_parser.parse_document(document_path, self.parsed_content_dir)
             self.logger.info(f"   Parsed document and extracted {len(images)} images")
 
-            # Step 2: Summarize images
             self.logger.info("2. Summarizing images...")
             image_summaries = self.content_processor.summarize_images(images)
             self.logger.info(f"   Generated {len(image_summaries)} image summaries")
 
-            # Step 3: Format document with image summaries
             self.logger.info("3. Formatting document with image summaries...")
             formatted_document = self.content_processor.format_document_with_images(parsed_document, image_summaries)
 
-            # Step 4: Chunk document into semantic sections
             self.logger.info("4. Chunking document into semantic sections...")
             document_chunks = self.content_processor.chunk_document(formatted_document)
             self.logger.info(f"   Document split into {len(document_chunks)} chunks")
 
-            # Step 5: Create vector store and document store
             self.logger.info("5. Creating vector store knowledge base...")
             self.vector_store.create_vectorstore(
                 document_chunks=document_chunks, 
@@ -173,9 +168,7 @@ class MedicalRAG:
         start_time = time.time()
         self.logger.info(f"RAG Agent processing query: {query}")
         
-        # Process query and return result, passing chat_history
         try:
-            # Step 1: Expand query
             self.logger.info(f"1. Expanding query: '{query}'")
             expansion_result = self.query_expander.expand_query(query)
             expanded_query = expansion_result["expanded_query"]
@@ -183,7 +176,6 @@ class MedicalRAG:
             self.logger.info(f"   Expanded: '{expanded_query}'")
             query = expanded_query
 
-            # Step 2: Retrieval
             self.logger.info(f"2. Retrieving relevant documents for the query: '{query}'")
             vectorstore, docstore = self.vector_store.load_vectorstore()
             retrieved_documents = self.vector_store.retrieve_relevant_chunks(
@@ -194,7 +186,6 @@ class MedicalRAG:
 
             self.logger.info(f"   Retrieved {len(retrieved_documents)} relevant document chunks")
 
-            # Step 3: Rerank the retrieved documents if we have a reranker and enough documents
             self.logger.info(f"3. Reranking the retrieved documents")
             if self.reranker and len(retrieved_documents) > 1:
                 reranked_documents, reranked_top_k_picture_paths = self.reranker.rerank(query, retrieved_documents, self.parsed_content_dir)
@@ -205,7 +196,6 @@ class MedicalRAG:
                 reranked_documents = retrieved_documents
                 reranked_top_k_picture_paths = []
 
-            # Step 4: Generate response
             self.logger.info("4. Generating response...")
             response = self.response_generator.generate_response(
                 query=query,
@@ -214,7 +204,6 @@ class MedicalRAG:
                 chat_history=chat_history
                 )
             
-            # Add timing information
             processing_time = time.time() - start_time
             response["processing_time"] = processing_time
             
@@ -224,7 +213,6 @@ class MedicalRAG:
             self.logger.error(f"Error processing query: {e}")
             import traceback
             self.logger.error(traceback.format_exc())
-            # Return error response
             return {
                 "response": f"I encountered an error while processing your query: {str(e)}",
                 "sources": [],
